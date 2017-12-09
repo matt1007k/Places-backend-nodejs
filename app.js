@@ -14,6 +14,13 @@ const sessions = require('./routes/sessions');
 const favorites = require('./routes/favorites');
 const visits = require('./routes/visits');
 const visitsPlaces = require('./routes/visitsPlaces');
+const applications = require('./routes/applications');
+
+const findAppBySecret = require('./middlewares/findAppBySecret');
+const findAppByApplicationId = require('./middlewares/findAppByApplicationId');
+const authApp = require('./middlewares/authApp')();
+const allowCORs = require('./middlewares/allowCORs')();
+
 const secrets = require('./config/secrets');
 
 db.connect();
@@ -29,9 +36,16 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(findAppBySecret);
+app.use(findAppByApplicationId);
+app.use(authApp.unless({method:'OPTIONS'}));
+
+app.use(allowCORs.unless({path: '/public'}));
+
+
 app.use(
 	jwtMiddleware({secret: secrets.jwtSecret})
-		.unless({path: ['/sessions','/users'], method: 'GET'})
+		.unless({path: ['/sessions','/users'], method: ['GET','OPTIONS']})
 );
 
 app.use('/places', places);
@@ -40,6 +54,7 @@ app.use('/users', users);
 app.use('/sessions', sessions);
 app.use('/favorites', favorites);
 app.use('/visits', visits);
+app.use('/applications', applications);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
